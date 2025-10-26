@@ -1,55 +1,133 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts | Sam Howard</title><link>https://samuel-howard.github.io/post/</link><atom:link href="https://samuel-howard.github.io/post/index.xml" rel="self" type="application/rss+xml"/><description>Posts</description><generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sun, 13 Dec 2020 00:00:00 +0000</lastBuildDate><image><url>https://samuel-howard.github.io/media/icon_hubf35302e7af3b1226e484d41d57736a0_3360_512x512_fill_lanczos_center_3.png</url><title>Posts</title><link>https://samuel-howard.github.io/post/</link></image><item><title>Welcome to Wowchemy, the website builder for Hugo</title><link>https://samuel-howard.github.io/post/getting-started/</link><pubDate>Sun, 13 Dec 2020 00:00:00 +0000</pubDate><guid>https://samuel-howard.github.io/post/getting-started/</guid><description>&lt;h2 id="overview">Overview&lt;/h2>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blogs | Sam Howard</title><link>https://samuel-howard.github.io/post/</link><atom:link href="https://samuel-howard.github.io/post/index.xml" rel="self" type="application/rss+xml"/><description>Blogs</description><generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 25 Oct 2025 00:00:00 +0000</lastBuildDate><image><url>https://samuel-howard.github.io/media/icon_hubf35302e7af3b1226e484d41d57736a0_3360_512x512_fill_lanczos_center_3.png</url><title>Blogs</title><link>https://samuel-howard.github.io/post/</link></image><item><title>Computing Wasserstein barycentres using bridge-matching</title><link>https://samuel-howard.github.io/post/imfbarycentres/</link><pubDate>Sat, 25 Oct 2025 00:00:00 +0000</pubDate><guid>https://samuel-howard.github.io/post/imfbarycentres/</guid><description>&lt;p>This is an accompanying blogpost for our NeurIPS 2025 paper &lt;em>Schrödinger Bridge Matching for Tree-Structured Costs and Entropic Wasserstein Barycentres&lt;/em>, in which we use flow-matching techniques to solve for Wasserstein barycentres. Checkout the full paper &lt;a href="https://arxiv.org/abs/2506.17197" target="_blank" rel="noopener">here!&lt;/a> Code is available on &lt;a href="https://github.com/samuel-howard/Tree_SB_Matching_Barycentres" target="_blank" rel="noopener">GitHub&lt;/a>.&lt;/p>
+&lt;h2 id="introduction">Introduction&lt;/h2>
+&lt;p>The Wasserstein barycentre provides a natural notion of &amp;lsquo;average&amp;rsquo; for probability distributions and has a wide range of applications. However, computing barycentres is notoriously difficult. Optimal transport, and its dynamic entropy-regularised counterpart the Schrödinger bridge, have become massively popular in the flow-based generative modelling community recently. In this work, we propose an efficient iterative solver for Wasserstein barycentres using flow-based generative modelling techniques.&lt;/p>
+&lt;h2 id="optimal-transport">Optimal transport&lt;/h2>
+&lt;p>Let&amp;rsquo;s first start by defining the basic optimal transport problem. Given a source and target distribution $\mu_0$ and $\mu_1$, the original OT formulation given by Monge aims to find a map $T^*: \mathbb{R}^d \rightarrow \mathbb{R}^d$ pushing $\mu_0$ onto $\mu_1$, that is $\mu_1 = T^* \text{#} \mu_0$, while minimizing the total cost of transportation according to a given cost function $c: \mathbb{R}^d \times \mathbb{R}^d \rightarrow \mathbb{R}$,
+$$
+\min_{T: T \text{#} \mu_0 = \mu_1} \int_{\mathbb{R}^d} c(x, T(x)) , \mathrm{d}\mu_0(x).
+$$&lt;/p>
+&lt;p>While intuitive, the Monge formulation of OT is restrictive in that it does not permit splitting of mass in the transportation. Instead, it is common to consider the more general &lt;em>Kantorovich formulation&lt;/em>, which searches over joint distributions $\pi \in \mathcal{P}(\mathbb{R}^d \times \mathbb{R}^d)$ with the correct marginals,
+$$
+\min_{\pi: \pi_0 = \mu_0,, \pi_1 = \mu_1}
+\iint_{\mathbb{R}^d \times \mathbb{R}^d}
+c(x, y) , \mathrm{d}\pi(x, y).
+$$&lt;/p>
+&lt;p>When the cost function is quadratic, that is $c(x,y) = \frac{1}{2} \lVert x-y \rVert_2^2$, this minimum gives the squared Wasserstein-2 distance $W_2^2(\mu_0,\mu_1)$ between the two measures. $W_2(\mu_0,\mu_1)$ gives a natural notion of distance between probability distributions, and can be considered the analogue of the $L_2$ distance in $\mathbb{R}^d$ but for the space of probability measures.&lt;/p>
+&lt;h2 id="wasserstein-barycentres">Wasserstein barycentres&lt;/h2>
+&lt;p>Now lets consider how one might define a notion of &amp;lsquo;average&amp;rsquo; for a set of measures $\mu_1, &amp;hellip;, \mu_\ell$. In the familiar case when we want to take an average of vectors $x_1, &amp;hellip;, x_\ell$, we can can of course compute the mean in closed form, $\bar{x} = \frac{1}{N} \sum_i x_i$. Note that this can in fact be formulated as a variational problem, where we search for the vector that minimises the cumulative squared $L_2$ distance to each of the points
+$$
+\min_{x} \sum_i \lVert x - x_i \rVert_2^2.
+$$&lt;/p>
+&lt;p>Recall that above, we said that the Wasserstein distance $W_2(\mu_i,\mu_j)$ provided the analogue of the $L_2$ distance on the space of probability measures. We can therefore substitute in $W_2$ in place of the $L_2$ norm, which precisely gives the definition of the Wasserstein-2 barycentre. Given $\ell$ measures $(\mu_1, \ldots, \mu_\ell)$ and weights $(\lambda_1, \ldots, \lambda_\ell)$ summing to $1$, the Wasserstein-2 barycentre is defined as &lt;sup id="fnref:1">&lt;a href="#fn:1" class="footnote-ref" role="doc-noteref">1&lt;/a>&lt;/sup>
+$$
+\nu^* = \arg\min_{\nu} \sum_i \lambda_i , W_2^2(\mu_i, \nu).
+$$&lt;/p>
+&lt;p>Just by looking at this problem formulation, we can see that computing the barycentre is going to be challenging. It involves $\ell$ OT subproblems (computing even a single OT problem can be challenging!), and moreover one of the marginals is free to move and needs to be optimised over.&lt;/p>
+&lt;p>Fortunately, there is an elegant and highly successful way to solve the for the barycentre leveraging the fixed-point property $x = \sum_i \lambda_i T_i(x)$ which holds at the solution, where each $T_i$ is the OT map from $\nu$ to $\mu_i$. Intuitively, this states that &lt;em>&amp;rsquo;each point in the support of the barycentre is the average of the corresponding points in the marginals&amp;rsquo;&lt;/em>. The resulting fixed-point procedure &lt;sup id="fnref:2">&lt;a href="#fn:2" class="footnote-ref" role="doc-noteref">2&lt;/a>&lt;/sup> works well and is known to converge very quickly. However, it still requires computing $\ell$ OT maps at each iteration, which can be expensive.&lt;/p>
+&lt;figure>
+&lt;img src="barycentre_fixed_point.png" alt="Fixed-point barycentre iteration">
+&lt;figcaption>&lt;strong>Fixed-point barycentre solver:&lt;/strong> Each barycentre point equals the weighted average of its corresponding points in the known marginals, \(x=\sum_i \lambda_i T_i(x)\), motivating a fixed-point procedure for barycentre computation.&lt;/figcaption>
+&lt;/figure>
+&lt;h2 id="schrödinger-bridges-and-iterative-markov-fitting">Schrödinger bridges and Iterative Markov Fitting&lt;/h2>
+&lt;p>Now lets discuss the Schrödinger bridge problem, its connections to OT, and how flow-based generative modelling techniques can be used to compute the solution. Given an initial and final measure $\mu_0$ and $\mu_T$ of a population, the SB problem aims to identify the most likely intermediate dynamics of the population under the assumption that the movement is driven by a stochastic reference process $\mathbb{Q}$. The resulting &lt;em>dynamic&lt;/em> SB problem is defined as
+$$
+\operatorname*{argmin}_{\mathbb{P}~ \mathrm{s.t.}~ \mathbb{P}_0=\mu_0, \mathbb{P}_T=\mu_T} \mathrm{KL}( \mathbb{P} \Vert \mathbb{Q}).
+$$
+When the reference process $\mathbb{Q}$ is taken to be that of a Brownian motion, the KL divergence can be expanded and the SB problem recovers an entropy-regularised version of quadratic OT. Intuitively, this make sense&amp;mdash;if we observed Brownian motion particles that started at a measure $\mu_0$ at time 0 and ended at $\mu_T$ at time $T$, then we would expect the particles to have travelled somewhat optimally between the marginals in the intervening time (particularly when the amount of noise is small).&lt;/p>
+&lt;p>The SB solution $\mathbb{P}^{SB}$ can be characterised as the &lt;em>unique&lt;/em> path measure with the correct marginals that is both Markov (i.e. can be simulated forward in time, as an SDE), and a mixture of Brownian bridges. This motivates the Iterative Markovian Fitting (IMF) procedure &lt;sup id="fnref:3">&lt;a href="#fn:3" class="footnote-ref" role="doc-noteref">3&lt;/a>&lt;/sup>&lt;sup id="fnref:4">&lt;a href="#fn:4" class="footnote-ref" role="doc-noteref">4&lt;/a>&lt;/sup>, which repeatedly projects onto these two characterising properties. The &lt;em>reciprocal projection&lt;/em> is a mixture of bridges mixed according to the current coupling, and the &lt;em>Markovian projection&lt;/em> is computed using &lt;em>bridge-matching&lt;/em> (which is just flow-matching, but with noise). The resulting procedure iteratively &amp;lsquo;rewires&amp;rsquo; the paths until it converges to the SB solution.&lt;/p>
+&lt;div style="display:flex; gap:5%; align-items:stretch; margin:0; padding:0;">
+&lt;span style="flex:1; display:block; overflow:hidden; height:300px; --crop:30px;">
+&lt;img src="IMF_reciprocal.png" alt="IMF reciprocal"
+style="display:block;
+width:calc(100% + (2 * var(--crop)));
+height:calc(100% + (2 * var(--crop)));
+max-width:none; max-height:none;
+transform: translate(calc(var(--crop) * -1), calc(var(--crop) * -1));
+object-fit:cover; object-position:center;">
+&lt;/span>
+&lt;span style="flex:1; display:block; overflow:hidden; height:300px; --crop:30px;">
+&lt;img src="IMF_markovianised.png" alt="IMF markovianised"
+style="display:block;
+width:calc(100% + (2 * var(--crop)));
+height:calc(100% + (2 * var(--crop)));
+max-width:none; max-height:none;
+transform: translate(calc(var(--crop) * -1), calc(var(--crop) * -1));
+object-fit:cover; object-position:center;">
+&lt;/span>
+&lt;/div>
+&lt;p style="text-align:center; font-size:0.95em; color:#666; margin:0.6rem 0 1.2rem;">
+&lt;strong>Iterative Markov Fitting:&lt;/strong> IMF alternates two steps: (Left) &lt;em>Reciprocal projection&lt;/em>—mixture of Brownian bridges between sampled endpoints, obtained by simulating the current Markov process; (Right) &lt;em>Markov projection&lt;/em>—fit an SDE using bridge-matching, obtaining a Markov process tracing out the same marginals.
+&lt;/p>
+&lt;h2 id="imf-on-a-tree-structure">IMF on a tree structure&lt;/h2>
+&lt;p>Based on what we have described so far, we are presented with two natural questions:&lt;/p>
 &lt;ol>
-&lt;li>The Wowchemy website builder for Hugo, along with its starter templates, is designed for professional creators, educators, and teams/organizations - although it can be used to create any kind of site&lt;/li>
-&lt;li>The template can be modified and customised to suit your needs. It&amp;rsquo;s a good platform for anyone looking to take control of their data and online identity whilst having the convenience to start off with a &lt;strong>no-code solution (write in Markdown and customize with YAML parameters)&lt;/strong> and having &lt;strong>flexibility to later add even deeper personalization with HTML and CSS&lt;/strong>&lt;/li>
-&lt;li>You can work with all your favourite tools and apps with hundreds of plugins and integrations to speed up your workflows, interact with your readers, and much more&lt;/li>
+&lt;li>Can IMF be used to solve for Wasserstein barycentres?&lt;/li>
+&lt;li>Can flow-based OT solvers be used in a fixed-point barycentre algorithm?&lt;/li>
 &lt;/ol>
-&lt;figure id="figure-the-template-is-mobile-first-with-a-responsive-design-to-ensure-that-your-site-looks-stunning-on-every-device">
-&lt;div class="d-flex justify-content-center">
-&lt;div class="w-100" >&lt;img src="https://raw.githubusercontent.com/wowchemy/wowchemy-hugo-modules/master/academic.png" alt="The template is mobile first with a responsive design to ensure that your site looks stunning on every device." loading="lazy" data-zoomable />&lt;/div>
-&lt;/div>&lt;figcaption>
-The template is mobile first with a responsive design to ensure that your site looks stunning on every device.
-&lt;/figcaption>&lt;/figure>
-&lt;h2 id="get-started">Get Started&lt;/h2>
-&lt;ul>
-&lt;li>👉 &lt;a href="https://wowchemy.com/templates/" target="_blank" rel="noopener">&lt;strong>Create a new site&lt;/strong>&lt;/a>&lt;/li>
-&lt;li>📚 &lt;a href="https://wowchemy.com/docs/" target="_blank" rel="noopener">&lt;strong>Personalize your site&lt;/strong>&lt;/a>&lt;/li>
-&lt;li>💬 &lt;a href="https://discord.gg/z8wNYzb" target="_blank" rel="noopener">Chat with the &lt;strong>Wowchemy community&lt;/strong>&lt;/a> or &lt;a href="https://discourse.gohugo.io" target="_blank" rel="noopener">&lt;strong>Hugo community&lt;/strong>&lt;/a>&lt;/li>
-&lt;li>🐦 Twitter: &lt;a href="https://twitter.com/wowchemy" target="_blank" rel="noopener">@wowchemy&lt;/a> &lt;a href="https://twitter.com/GeorgeCushen" target="_blank" rel="noopener">@GeorgeCushen&lt;/a> &lt;a href="https://twitter.com/search?q=%23MadeWithWowchemy&amp;amp;src=typed_query" target="_blank" rel="noopener">#MadeWithWowchemy&lt;/a>&lt;/li>
-&lt;li>💡 &lt;a href="https://github.com/wowchemy/wowchemy-hugo-modules/issues" target="_blank" rel="noopener">Request a &lt;strong>feature&lt;/strong> or report a &lt;strong>bug&lt;/strong> for &lt;em>Wowchemy&lt;/em>&lt;/a>&lt;/li>
-&lt;li>⬆️ &lt;strong>Updating Wowchemy?&lt;/strong> View the &lt;a href="https://wowchemy.com/docs/hugo-tutorials/update/" target="_blank" rel="noopener">Update Tutorial&lt;/a> and &lt;a href="https://wowchemy.com/updates/" target="_blank" rel="noopener">Release Notes&lt;/a>&lt;/li>
-&lt;/ul>
-&lt;h2 id="crowd-funded-open-source-software">Crowd-funded open-source software&lt;/h2>
-&lt;p>To help us develop this template and software sustainably under the MIT license, we ask all individuals and businesses that use it to help support its ongoing maintenance and development via sponsorship.&lt;/p>
-&lt;h3 id="-click-here-to-become-a-sponsor-and-help-support-wowchemys-future-httpswowchemycomplans">&lt;a href="https://wowchemy.com/plans/" target="_blank" rel="noopener">❤️ Click here to become a sponsor and help support Wowchemy&amp;rsquo;s future ❤️&lt;/a>&lt;/h3>
-&lt;p>As a token of appreciation for sponsoring, you can &lt;strong>unlock &lt;a href="https://wowchemy.com/plans/" target="_blank" rel="noopener">these&lt;/a> awesome rewards and extra features 🦄✨&lt;/strong>&lt;/p>
-&lt;h2 id="ecosystem">Ecosystem&lt;/h2>
-&lt;ul>
-&lt;li>&lt;strong>&lt;a href="https://github.com/wowchemy/hugo-academic-cli" target="_blank" rel="noopener">Hugo Academic CLI&lt;/a>:&lt;/strong> Automatically import publications from BibTeX&lt;/li>
-&lt;/ul>
-&lt;h2 id="inspiration">Inspiration&lt;/h2>
-&lt;p>&lt;a href="https://academic-demo.netlify.com/" target="_blank" rel="noopener">Check out the latest &lt;strong>demo&lt;/strong>&lt;/a> of what you&amp;rsquo;ll get in less than 10 minutes, or &lt;a href="https://wowchemy.com/user-stories/" target="_blank" rel="noopener">view the &lt;strong>showcase&lt;/strong>&lt;/a> of personal, project, and business sites.&lt;/p>
-&lt;h2 id="features">Features&lt;/h2>
-&lt;ul>
-&lt;li>&lt;strong>Page builder&lt;/strong> - Create &lt;em>anything&lt;/em> with &lt;a href="https://wowchemy.com/docs/page-builder/" target="_blank" rel="noopener">&lt;strong>widgets&lt;/strong>&lt;/a> and &lt;a href="https://wowchemy.com/docs/content/writing-markdown-latex/" target="_blank" rel="noopener">&lt;strong>elements&lt;/strong>&lt;/a>&lt;/li>
-&lt;li>&lt;strong>Edit any type of content&lt;/strong> - Blog posts, publications, talks, slides, projects, and more!&lt;/li>
-&lt;li>&lt;strong>Create content&lt;/strong> in &lt;a href="https://wowchemy.com/docs/content/writing-markdown-latex/" target="_blank" rel="noopener">&lt;strong>Markdown&lt;/strong>&lt;/a>, &lt;a href="https://wowchemy.com/docs/import/jupyter/" target="_blank" rel="noopener">&lt;strong>Jupyter&lt;/strong>&lt;/a>, or &lt;a href="https://wowchemy.com/docs/install-locally/" target="_blank" rel="noopener">&lt;strong>RStudio&lt;/strong>&lt;/a>&lt;/li>
-&lt;li>&lt;strong>Plugin System&lt;/strong> - Fully customizable &lt;a href="https://wowchemy.com/docs/customization/" target="_blank" rel="noopener">&lt;strong>color&lt;/strong> and &lt;strong>font themes&lt;/strong>&lt;/a>&lt;/li>
-&lt;li>&lt;strong>Display Code and Math&lt;/strong> - Code highlighting and &lt;a href="https://en.wikibooks.org/wiki/LaTeX/Mathematics" target="_blank" rel="noopener">LaTeX math&lt;/a> supported&lt;/li>
-&lt;li>&lt;strong>Integrations&lt;/strong> - &lt;a href="https://analytics.google.com" target="_blank" rel="noopener">Google Analytics&lt;/a>, &lt;a href="https://disqus.com" target="_blank" rel="noopener">Disqus commenting&lt;/a>, Maps, Contact Forms, and more!&lt;/li>
-&lt;li>&lt;strong>Beautiful Site&lt;/strong> - Simple and refreshing one page design&lt;/li>
-&lt;li>&lt;strong>Industry-Leading SEO&lt;/strong> - Help get your website found on search engines and social media&lt;/li>
-&lt;li>&lt;strong>Media Galleries&lt;/strong> - Display your images and videos with captions in a customizable gallery&lt;/li>
-&lt;li>&lt;strong>Mobile Friendly&lt;/strong> - Look amazing on every screen with a mobile friendly version of your site&lt;/li>
-&lt;li>&lt;strong>Multi-language&lt;/strong> - 34+ language packs including English, 中文, and Português&lt;/li>
-&lt;li>&lt;strong>Multi-user&lt;/strong> - Each author gets their own profile page&lt;/li>
-&lt;li>&lt;strong>Privacy Pack&lt;/strong> - Assists with GDPR&lt;/li>
-&lt;li>&lt;strong>Stand Out&lt;/strong> - Bring your site to life with animation, parallax backgrounds, and scroll effects&lt;/li>
-&lt;li>&lt;strong>One-Click Deployment&lt;/strong> - No servers. No databases. Only files.&lt;/li>
-&lt;/ul>
-&lt;h2 id="themes">Themes&lt;/h2>
-&lt;p>Wowchemy and its templates come with &lt;strong>automatic day (light) and night (dark) mode&lt;/strong> built-in. Alternatively, visitors can choose their preferred mode - click the moon icon in the top right of the &lt;a href="https://academic-demo.netlify.com/" target="_blank" rel="noopener">Demo&lt;/a> to see it in action! Day/night mode can also be disabled by the site admin in &lt;code>params.toml&lt;/code>.&lt;/p>
-&lt;p>&lt;a href="https://wowchemy.com/docs/customization" target="_blank" rel="noopener">Choose a stunning &lt;strong>theme&lt;/strong> and &lt;strong>font&lt;/strong>&lt;/a> for your site. Themes are fully customizable.&lt;/p>
-&lt;h2 id="license">License&lt;/h2>
-&lt;p>Copyright 2016-present &lt;a href="https://georgecushen.com" target="_blank" rel="noopener">George Cushen&lt;/a>.&lt;/p>
-&lt;p>Released under the &lt;a href="https://github.com/wowchemy/wowchemy-hugo-modules/blob/master/LICENSE.md" target="_blank" rel="noopener">MIT&lt;/a> license.&lt;/p></description></item></channel></rss>
+&lt;p>In fact, these questions are answered by the same procedure, which performs IMF over a tree-based structure!&lt;/p>
+&lt;p>We can think of Wasserstein barycentres as a multi-marginal optimal transport problem with a &lt;em>tree-structured&lt;/em> cost function $c(x_{0:\ell}) = \sum_{i=1}^\ell \lambda_i \lVert x_0 - x_i \rVert_2^2$. Specifically, the cost function is defined over a star-shaped tree, in which the centre node corresponds to the barycentre and each of the leaves is a fixed marginal $\mu_i$. Just as in the standard case there is an analogous Schrödinger bridge problem, where we now consider stochastic processes defined over the tree structure. We can think of stochastic processes over the tree structure as &amp;lsquo;joined up&amp;rsquo; versions of the standard problem along each edge, now joined up at where the edges share vertices. The TreeSB &lt;sup id="fnref:5">&lt;a href="#fn:5" class="footnote-ref" role="doc-noteref">5&lt;/a>&lt;/sup>&lt;sup id="fnref:6">&lt;a href="#fn:6" class="footnote-ref" role="doc-noteref">6&lt;/a>&lt;/sup> problem considers minimising over path measures $\mathbb{P}$ defined over the whole tree structure,
+$$
+\operatorname*{argmin}_{\mathbb{P} ~\mathrm{ over~tree,~s.t.~} \Pi_i=\mu_i ~~ \forall i \in \mathcal{S}} \mathrm{KL}( \mathbb{P} \Vert \mathbb{Q}).
+$$
+When the reference process $\mathbb{Q}$ is Brownian, this again recovers an entropy-regularised version of the corrresponding OT problem. Therefore, if we can solve for the TreeSB solution, we will have an approximation to the Wasserstein barycentre! Indeed, this construction was used in &lt;sup id="fnref1:6">&lt;a href="#fn:6" class="footnote-ref" role="doc-noteref">6&lt;/a>&lt;/sup> using the Iterative Proportional Fitting technique to solve for the solution.&lt;/p>
+&lt;p>So what is the corresponding IMF procedure for this tree-structured case? Previously, IMF simulated the current process to obtain coupling samples $(Y_0, Y_T)$, and then sampled from Brownian bridges $\mathbb{Q}_{\cdot| 0,T}$ to perform the bridge-matching to obtain the next iterate. Now, rather than having points sampled from the coupling over the endpoints, we have samples ${Y_i, i\in \mathcal{S}}$ from a coupling over &lt;em>all the known marginals&lt;/em> $\mathcal{S}$. However, computing the corresponding bridges is still tractable &amp;mdash; the behaviour of the reference process $\mathbb{Q}$ has Gaussian increments along each edge, so the induced coupling over the vertices is a joint Gaussian and thus the conditional distribution at the unknown central node is again another Gaussian. The resulting IMF procedure on the star-shaped tree structure becomes:&lt;/p>
+&lt;ol>
+&lt;li>Simulate the current process along each edge (started from a known marginal) to obtain coupling samples $Y_i, i \in \mathcal{S}$ at the known marginals.&lt;/li>
+&lt;li>Obtain sample from the unknown centre marginal according to the conditional distribution $\mathbb{Q}_{0|\mathcal{S}}$, which is $Y_0 \sim \mathcal{N} (\sum \lambda_i Y_i, \sigma^2 Id )$&lt;/li>
+&lt;li>Perform bridge-matching along each edge as normal, using Brownian bridges between the obtained coupling samples $(Y_0, Y_i)$.&lt;/li>
+&lt;/ol>
+&lt;p>The resulting algorithm, named TreeDSBM, is illustrated below.&lt;/p>
+&lt;div style="display:flex; justify-content:center; align-items:flex-start; gap:2%;">
+&lt;img src="treeIMF_star_reciprocal.png" alt="Reciprocal" style="width:49%;" />
+&lt;img src="treeIMF_star_markovianised.png" alt="Markovianised" style="width:49%;" />
+&lt;/div>
+&lt;p style="text-align:center; font-size:0.95em; color:#666; margin:0.6rem 0 1.2rem;">
+&lt;strong>Iterative Markov Fitting on a star-shaped tree:&lt;/strong> Known marginals shown in blue, unknown barycentre shown in red. (Left) &lt;em>Reciprocal projection&lt;/em>—mixture of Brownian bridges between samples $Y_i$ at the known marginals (obtained by simulating the current Markov process over the tree) and $Y_0 \sim \mathcal{N} (\sum \lambda_i Y_i, \sigma^2 Id )$ sampled at the centre; (Right) &lt;em>Markov projection&lt;/em>—fit an SDE using bridge-matching along each edge, obtaining a Markov process over the tree that traces out the same marginals.
+&lt;/p>
+&lt;h2 id="why-does-this-algorithm-make-sense">Why does this algorithm make sense?&lt;/h2>
+&lt;p>At first glance, the resulting algorithm is a simple extension of the IMF procedure to the tree-structured SB setting. However, the resulting algorithm actually results in an extremely natural method for computing Wasserstein barycentres, due to its connection to the fixed-point methods discussed earlier.&lt;/p>
+&lt;p>Recall the fixed-point barycentre method that we described above&amp;mdash;at each iteration, a new candidate barycentre is constructed by pushing forward the current iteration through the map $\sum_i \lambda_i T_i$. The resulting iterates are known to converge quickly to the solution, however this involves solving for several OT maps $T_i$ at each iteration.&lt;/p>
+&lt;p>In our algorithm, the centre sample $Y_0$ is sampled from the coupling as $Y_0 \sim \mathcal{N} (\sum \lambda_i Y_i, \sigma^2 Id )$. The method can therefore be viewed as a natural counterpart of fixed-point methods for barycentre computation, but for the case of flow-based entropic OT solvers. In particular, it shows that the IMF and fixed-point iterations can in fact be combined into a single iterative procedure! Importantly, the expensive OT map computations required for the fixed-point procedure can instead be switched out for inexpensive and stable bridge-matching procedures. Morevoer, empirically we found the TreeDSBM algorithm to retain the fast convergence property of the fixed-point procedure in terms of the number of iterations required.
+By requiring only a single bridge-matching procedure along each edge before updating the barycentre, TreeDSBM strikes a good balance between the efficiency of iterative fixed-point-based approaches without requiring full OT map computations at each iteration, making it a natural and practical algorithm for Wasserstein barycentre computation.&lt;/p>
+&lt;div style="display:flex; justify-content:center; align-items:flex-start; gap:2%;">
+&lt;img src="2d_3datasets_left_two_cols.png" alt="Reciprocal" style="width:30%;" />
+&lt;img src="2d_3datasets_IMF_progression_blog.png" alt="Markovianised" style="width:21%;" />
+&lt;/div>
+&lt;p style="text-align:center; font-size:0.95em; color:#666; margin:0.6rem 0 1.2rem;">
+&lt;strong>TreeDSBM applied to experimental setting of [6]:&lt;/strong> The ground-truth barycentre of the three 2d datasets is shown on the left. The TreeDSBM algorithm computes an accurate approximation to the barycentre after only a couple of IMF steps.
+&lt;/p>
+&lt;h2 id="citation">Citation&lt;/h2>
+&lt;p>If you find our paper, code, or this blog useful, please consider citing as&lt;/p>
+&lt;pre>&lt;code> @misc{howard2025schrodingerbridgematchingtreestructured,
+title={Schr\"odinger Bridge Matching for Tree-Structured Costs and Entropic Wasserstein Barycentres},
+author={Samuel Howard and Peter Potaptchik and George Deligiannidis},
+year={2025},
+eprint={2506.17197},
+archivePrefix={arXiv},
+primaryClass={stat.ML},
+url={https://arxiv.org/abs/2506.17197},
+} &lt;/code>&lt;/pre>
+&lt;h2 id="references">References&lt;/h2>
+&lt;div class="footnotes" role="doc-endnotes">
+&lt;hr>
+&lt;ol>
+&lt;li id="fn:1">
+&lt;p>Agueh and Carlier, 2011, Barycenters in the Wasserstein space&amp;#160;&lt;a href="#fnref:1" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:2">
+&lt;p>Álvarez-Esteban et al, 2016, A fixed-point approach to barycenters in Wasserstein space&amp;#160;&lt;a href="#fnref:2" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:3">
+&lt;p>Shi et al, 2023, Diffusion Schrödinger Bridge Matching&amp;#160;&lt;a href="#fnref:3" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:4">
+&lt;p>Peluchetti, 2023, Diffusion bridge mixture transports, Schrödinger bridge problems and generative modeling&amp;#160;&lt;a href="#fnref:4" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:5">
+&lt;p>Haasler et al, 2021, Multi-marginal Optimal Transport with a Tree-structured cost and the Schrödinger Bridge Problem&amp;#160;&lt;a href="#fnref:5" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;li id="fn:6">
+&lt;p>Noble et al, 2023, Tree-Based Diffusion Schrödinger Bridge with Applications to Wasserstein Barycenters&amp;#160;&lt;a href="#fnref:6" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&amp;#160;&lt;a href="#fnref1:6" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;/div></description></item></channel></rss>
